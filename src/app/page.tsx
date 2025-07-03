@@ -368,7 +368,7 @@ export default function HomePage() {
               </p>
               <div className="p-4 bg-gray-100 rounded-lg border border-gray-200">
                 {baseContent.trim() ? (
-                  <Chatbot baseContent={baseContent} didactics={didactics} pedagogy={pedagogy} />
+                  <Chatbot baseContent={baseContent} didactics={didactics} pedagogy={pedagogy} level={level} />
                 ) : (
                   <div className="text-center p-8 bg-gray-50 rounded-lg border">
                     <p className="text-gray-500">Voer eerst leerinhoud in om de chatbot te activeren.</p>
