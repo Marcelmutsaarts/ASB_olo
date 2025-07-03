@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
-    const { baseContent, didactics, pedagogy } = await req.json();
+    const { baseContent, didactics, pedagogy, level } = await req.json();
 
     if (!baseContent) {
       return NextResponse.json({ error: 'Basis content is vereist' }, { status: 400 });
@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
 
     const didacticsText = didactics ? `De vakdidactiek is: ${didactics}.` : '';
     const pedagogyText = pedagogy ? `Houd rekening met de volgende pedagogische aanpak: ${pedagogy}.` : '';
+    const levelText = level ? `Het gevraagde niveau is: ${level}. Pas de complexiteit en diepgang van de vragen en antwoorden hierop aan.` : '';
 
     const prompt = `
       Je bent een expert in het maken van educatief materiaal. Jouw taak is om een set van 10 tot 15 flashcards te genereren op basis van de volgende leerstof.
@@ -24,10 +25,11 @@ export async function POST(req: NextRequest) {
       2.  **Essentieel:** Focus uitsluitend op de belangrijkste concepten, definities, formules, en onmisbare feiten. Elke flashcard moet een cruciaal, onmisbaar stukje kennis uit de tekst toetsen.
       3.  **Duidelijk en Beknopt:** De vraag (question) moet eenduidig zijn. Het antwoord (answer) moet correct en zo kort mogelijk zijn, zonder essentiële informatie weg te laten.
 
-      Structureer de output als een JSON-array van objecten, waarbij elk object een "question" en "answer" key heeft.
+      Structureer de output als een JSON-array van objecten. Begin je antwoord direct met de '[' en eindig met ']'. Voeg geen inleidende tekst, commentaar of markdown-blokken toe. De output moet direct parseerbaar zijn als JSON.
       
       ${didacticsText}
       ${pedagogyText}
+      ${levelText}
       
       Leerstof:
       """
@@ -43,13 +45,13 @@ export async function POST(req: NextRequest) {
 
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const jsonText = response.text();
+    const rawText = response.text();
     
-    // Verwijder markdown codeblok-indicators
-    const cleanedJsonText = jsonText.replace(/```json\n?|```/g, '');
+    // Functie om JSON uit de tekst te extraheren
+    const jsonString = rawText.substring(rawText.indexOf('['), rawText.lastIndexOf(']') + 1);
 
     // Probeer de JSON te parsen om te valideren
-    const flashcards = JSON.parse(cleanedJsonText);
+    const flashcards = JSON.parse(jsonString);
 
     return NextResponse.json({ flashcards });
 

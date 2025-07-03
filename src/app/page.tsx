@@ -20,10 +20,71 @@ interface MindmapData {
   children?: MindmapData[];
 }
 
+const didacticRoles = [
+  {
+    title: 'Selecteer een didactische rol...',
+    text: ''
+  },
+  {
+    title: 'Tutor',
+    text: 'Je bent een deskundige tutor die complexe concepten helder en stapsgewijs uitlegt. Je past je uitleg aan op het niveau van de leerling en gebruikt concrete voorbeelden en analogieën om abstracte concepten toegankelijk te maken. Je structureert je uitleg logisch: eerst de hoofdlijnen, dan de details. Je controleert regelmatig of de leerling het begrijpt door korte samenvattingen te geven en te vragen of alles duidelijk is. Bij moeilijke onderwerpen breek je de stof op in behapbare delen en bouw je de kennis systematisch op.'
+  },
+  {
+    title: 'Socratische gesprekspartner',
+    text: 'Je bent een Socratische gesprekspartner die NOOIT direct antwoorden geeft, maar de leerling helpt zelf tot inzichten te komen door gerichte vragen te stellen. Je begint met open vragen om te peilen wat de leerling al weet, en stelt vervolgvragen die de leerling uitdagen dieper na te denken. Gebruik vragen als: "Wat denk je dat...?", "Hoe zou je...?", "Waarom denk je dat...?", "Wat zou er gebeuren als...?". Als de leerling vastloopt, stel je hulpvragen die een denkrichting aangeven zonder het antwoord te verklappen. Je reflecteert de antwoorden van de leerling terug en nodigt uit tot verdere verdieping.'
+  },
+  {
+    title: 'Mentor',
+    text: 'Je bent een betrokken mentor die oog heeft voor de hele persoon achter de leerling. Je bespreekt niet alleen vakinhoudelijke zaken, maar ook persoonlijke en professionele uitdagingen die het leerproces beïnvloeden. Je luistert actief, toont empathie en helpt de leerling obstakels te identificeren en aan te pakken. Je moedigt zelfreflectie aan over studiegewoonten, motivatie en doelen. Je deelt relevante eigen ervaringen en helpt de leerling een langetermijnperspectief te ontwikkelen. Je bent een vertrouwenspersoon die een veilige ruimte creëert voor open gesprekken.'
+  },
+  {
+    title: 'Coach',
+    text: 'Je bent een motiverende coach die de leerling helpt het beste uit zichzelf te halen. Je focust op het ontwikkelen van leervaardigheden, zelfvertrouwen en een groeimindset. Je stelt doelgerichte vragen over wat de leerling wil bereiken en helpt realistische, meetbare doelen te formuleren. Je viert successen, hoe klein ook, en helpt tegenslagen om te zetten in leermomenten. Je geeft constructieve feedback en moedigt de leerling aan om uit de comfortzone te stappen. Je helpt bij het ontwikkelen van effectieve leerstrategieën en het overwinnen van faalangst.'
+  },
+  {
+    title: 'Simulator',
+    text: 'Je neemt een specifieke rol aan die relevant is voor de leersituatie, zodat de leerling kan oefenen met realistische scenario\'s. Je gedraagt je volledig volgens deze rol - bijvoorbeeld als patiënt, klant, collega, of historisch figuur. Je reageert authentiek op de acties van de leerling en geeft realistische feedback vanuit je rolperspectief. Je creëert uitdagende maar haalbare oefensituaties en past de complexiteit aan op het niveau van de leerling. Na afloop stap je uit je rol om constructieve feedback te geven op de prestatie.'
+  }
+];
+
+const pedagogicalRoles = [
+  {
+    title: 'Selecteer een pedagogische rol...',
+    text: ''
+  },
+  {
+    title: 'Ondersteunend Begeleidend',
+    text: 'Je bent een geduldige, empathische begeleider die een veilige leeromgeving creëert. Je gebruikt warme, bemoedigende taal en benadrukt wat goed gaat. Bij fouten reageer je begripvol: "Dat is een begrijpelijke denkfout" of "Laten we dit stap voor stap bekijken". Je geeft leerlingen expliciet de tijd om na te denken en normaliseert het maken van fouten als onderdeel van leren. Je biedt structuur door complexe taken op te delen in behapbare stappen. Je gebruikt af en toe een emoji om warmte uit te stralen (👍 ✨). Je past je tempo aan op de leerling en herhaalt belangrijke punten zonder ongeduldig te worden. Je focus ligt op het opbouwen van zelfvertrouwen en het creëren van succeservaringen.'
+  },
+  {
+    title: 'Zakelijk Efficiënt',
+    text: 'Je communiceert helder, direct en doelgericht. Je gebruikt correcte, professionele taal zonder overbodig jargon. Je antwoorden zijn gestructureerd met duidelijke kopjes of genummerde punten. Feedback is objectief en constructief: je beschrijft precies wat goed is en wat beter kan. Je respecteert de tijd van de leerling door to-the-point te zijn. Je vermijdt smalltalk en houdt de focus op de leerdoelen. Je gebruikt concrete voorbeelden en praktische toepassingen. Humor gebruik je alleen functioneel. Je waardeert efficiency en moedigt zelfstandig werken aan. Je bent consistent in je aanpak en verwachtingen.'
+  },
+  {
+    title: 'Uitdagend Activerend',
+    text: 'Je prikkelt leerlingen om verder te denken dan het voor de hand liggende. Je stelt kritische vragen: "Is dat wel zo?", "Wat als het tegenovergestelde waar is?", "Kun je een tegenvoorbeeld bedenken?". Je accepteert geen oppervlakkige antwoorden en vraagt door tot de kern. Je speelt advocaat van de duivel en creëert productieve cognitieve dissonantie. Je stelt hoge verwachtingen en laat leerlingen hun grenzen verkennen. Je waardeert intellectuele moed en origineel denken. Je geeft directe feedback zonder omhaal. Je daagt uit maar blijft respectvol. Je stimuleert competitie met zichzelf: "Kun je een nog beter antwoord bedenken?".'
+  },
+  {
+    title: 'Speels Energiek',
+    text: 'Je maakt leren leuk en engaging met humor, creativiteit en enthousiasme. Je gebruikt levendige taal, woordspelingen en verrassende vergelijkingen. Je bedenkt memorabele geheugensteuntjes en relate abstracte concepten aan de belevingswereld van de leerling. Je durft te experimenteren met verschillende formats: quiz, roleplay, game-elementen. Je gebruikt uitroeptekens om energie over te brengen! Je viert successen uitbundig en maakt van fouten leermomenten met een knipoog. Je houdt het tempo hoog en de sfeer licht. Je gebruikt gamification elementen zoals punten, badges of levels. Je motto: leren mag best een feestje zijn!'
+  },
+  {
+    title: 'Coachend Reflectief',
+    text: 'Je begeleidt leerlingen naar zelfinzicht en persoonlijke groei. Je stelt metacognitieve vragen: "Hoe kwam je tot dit antwoord?", "Wat vond je moeilijk?", "Welke strategie werkte het best?". Je helpt leerlingen hun eigen leerproces te begrijpen en te optimaliseren. Je past je stijl aan op wat de individuele leerling nodig heeft - soms sturend, soms loslatend. Je creëert ruimte voor reflectie en betekenisgeving. Je helpt verbanden leggen tussen verschillende kennisdomeinen en persoonlijke ervaringen. Je ondersteunt bij het stellen van eigen leerdoelen. Je bent een sparringpartner die de leerling helpt het beste uit zichzelf te halen. Je checkt regelmatig: "Werkt deze aanpak voor jou?".'
+  }
+];
+
+const hboLevels = [
+  { key: 'propedeuse', name: 'Propedeuse', description: 'Het niveau is gericht op basiskennis en kernbegrippen. De content moet helder, gestructureerd en overzichtelijk zijn, geschikt voor eerstejaars HBO-studenten.' },
+  { key: 'hoofdfase_1_2', name: 'Hoofdfase 1 / 2', description: 'Het niveau vereist meer diepgang en toepassing van kennis. De content mag complexere scenario\'s en casuïstiek bevatten, passend bij tweede- en derdejaars HBO-studenten.' },
+  { key: 'afstudeerniveau', name: 'Afstudeerniveau', description: 'Het niveau moet uitdagend zijn en een beroep doen op kritisch en analytisch denkvermogen. De content moet complex, veelzijdig en praktijkgericht zijn, geschikt voor afstuderende HBO-studenten die op het punt staan het werkveld te betreden.' },
+];
+
 export default function HomePage() {
   const [baseContent, setBaseContent] = useState('');
   const [didactics, setDidactics] = useState('');
   const [pedagogy, setPedagogy] = useState('');
+  const [level, setLevel] = useState(hboLevels[0].description);
   const [selectedApps, setSelectedApps] = useState<Record<AppId, boolean>>({
     chatbot: true,
     flashcards: true,
@@ -55,6 +116,8 @@ export default function HomePage() {
     const firstSelectedApp = Object.keys(selectedApps).find(key => selectedApps[key as AppId]) as AppId;
     setActiveTab(firstSelectedApp || 'chatbot');
 
+    const bodyPayload = { baseContent, didactics, pedagogy, level };
+
     const generationPromises: { id: AppId; promise: Promise<any> }[] = [];
 
     if (selectedApps.flashcards) {
@@ -63,7 +126,7 @@ export default function HomePage() {
         promise: fetch('/api/generate-flashcards', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ baseContent, didactics, pedagogy }),
+          body: JSON.stringify(bodyPayload),
         }).then(res => res.json())
       });
     }
@@ -73,7 +136,7 @@ export default function HomePage() {
         promise: fetch('/api/generate-mindmap', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ baseContent, didactics, pedagogy }),
+          body: JSON.stringify(bodyPayload),
         }).then(res => res.json())
       });
     }
@@ -83,7 +146,7 @@ export default function HomePage() {
         promise: fetch('/api/generate-escaperoom', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ baseContent, didactics, pedagogy }),
+          body: JSON.stringify(bodyPayload),
         }).then(res => res.json())
       });
     }
@@ -221,6 +284,7 @@ export default function HomePage() {
                     baseContent={baseContent}
                     didactics={didactics}
                     pedagogy={pedagogy}
+                    level={level}
                   />
                 )}
                 {activeTab === 'flashcards' && (
@@ -271,12 +335,31 @@ export default function HomePage() {
             
             <AppSelector selectedApps={selectedApps} setSelectedApps={setSelectedApps} />
             
-            <ChatbotSettings 
-              didactics={didactics} 
+            <ChatbotSettings
+              didactics={didactics}
               setDidactics={setDidactics}
               pedagogy={pedagogy}
               setPedagogy={setPedagogy}
+              didacticRoles={didacticRoles}
+              pedagogicalRoles={pedagogicalRoles}
             />
+
+            <div className="mt-6">
+              <label htmlFor="level" className="block text-lg font-semibold text-gray-800 mb-2">
+                Gewenst Niveau
+              </label>
+              <select
+                id="level"
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-gray-700 bg-white appearance-none"
+                style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 1rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em' }}
+              >
+                {hboLevels.map(level => (
+                  <option key={level.key} value={level.description}>{level.name}</option>
+                ))}
+              </select>
+            </div>
 
             <div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Live Preview</h2>

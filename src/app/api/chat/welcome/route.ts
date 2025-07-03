@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { baseContent, didactics, pedagogy } = body;
+    const { baseContent, didactics, pedagogy, level } = body;
 
     if (!baseContent) {
       return NextResponse.json({ error: 'baseContent is required' }, { status: 400 });
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       ---
       Vakdidactiek: ${didactics || 'Algemene benadering'}
       Pedagogiek: ${pedagogy || 'Neutrale en behulpzame toon'}
+      Niveau: ${level || 'Algemeen HBO-niveau'}
       ---
 
       Voorbeeld output:

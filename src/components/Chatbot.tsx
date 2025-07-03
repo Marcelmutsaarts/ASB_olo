@@ -12,9 +12,10 @@ interface ChatbotProps {
   baseContent: string; // De inhoud die door de docent is verstrekt
   didactics: string; // Nieuwe prop
   pedagogy: string;  // Nieuwe prop
+  level: string; // Nieuwe prop voor HBO-niveau
 }
 
-const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy }) => {
+const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy, level }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +31,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy }) =
         body: JSON.stringify({ 
           baseContent,
           didactics,
-          pedagogy 
+          pedagogy,
+          level
         }),
       });
 
@@ -70,7 +72,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy }) =
           messages: newMessages, // Stuur volledige geschiedenis
           baseContent,
           didactics,
-          pedagogy
+          pedagogy,
+          level
         }),
       });
 

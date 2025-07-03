@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 
 export async function POST(req: Request) {
   try {
-    const { messages, baseContent, didactics, pedagogy } = await req.json();
+    const { messages, baseContent, didactics, pedagogy, level } = await req.json();
 
     const systemInstruction = `
       Je bent een AI-tutor. Gebruik de volgende context als je primaire kennisbank.
@@ -14,6 +14,10 @@ export async function POST(req: Request) {
       ---
       Als een vraag buiten deze context valt, mag je je algemene kennis gebruiken, maar vermeld expliciet dat het antwoord van buiten de verstrekte leerstof komt.
       Houd rekening met de volgende instructies voor je toon en aanpak:
+      [NIVEAU]
+      Pas je antwoorden, complexiteit en toon aan op het volgende niveau:
+      ${level || 'Algemeen HBO-niveau'}
+      [/NIVEAU]
       [DIDACTISCHE INSTRUCTIES]
       ${didactics || 'Geen specifieke didactische instructies.'}
       [/DIDACTISCHE INSTRUCTIES]

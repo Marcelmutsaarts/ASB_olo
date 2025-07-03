@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 
 export async function POST(req: Request) {
   try {
-    const { baseContent, didactics, pedagogy } = await req.json();
+    const { baseContent, didactics, pedagogy, level } = await req.json();
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
@@ -18,17 +18,18 @@ export async function POST(req: Request) {
       **Context voor de AI-Tutor:**
       - Didactiek: ${didactics}
       - Pedagogiek: ${pedagogy}
+      - Niveau: ${level || 'Algemeen HBO-niveau'}
 
       **Instructies:**
       1.  **Thema en Verhaal:** Creëer een kort, meeslepend achtergrondverhaal dat past bij de leerstof. De student is "opgesloten" en moet ontsnappen door kennisvragen te beantwoorden.
-      2.  **Puzzels:** Genereer 3 tot 5 opeenvolgende puzzels. Elke puzzel moet een duidelijke vraag bevatten die direct gerelateerd is aan de leerstof. De moeilijkheidsgraad moet vergelijkbaar zijn met die van flashcards of een basiskennisquiz.
+      2.  **Puzzels:** Genereer 3 tot 5 opeenvolgende puzzels. Elke puzzel moet een duidelijke vraag bevatten die direct gerelateerd is aan de leerstof. De moeilijkheidsgraad moet zijn afgestemd op het opgegeven Niveau.
       3.  **Antwoorden:** Geef voor elke puzzel een exact, correct antwoord.
       4.  **Hints:** Geef voor elke puzzel 2-3 hints die de student op weg helpen zonder het antwoord direct te verklappen.
       5.  **Feedback:** Schrijf een korte, positieve feedbackboodschap voor als een student een puzzel correct oplost.
       6.  **Eindes:** Schrijf een "succes" boodschap voor als de student ontsnapt, en een "mislukt" boodschap voor als de tijd om is.
 
       **Output Formaat:**
-      Geef je antwoord ALLEEN in JSON-formaat, volgens deze structuur:
+      Geef je antwoord ALLEEN in JSON-formaat. Begin je antwoord direct met de '{' en eindig met '}'. Voeg geen inleidende tekst, commentaar of markdown-blokken toe. De output moet direct parseerbaar zijn als JSON, volgens deze structuur:
       {
         "title": "Titel van de Escape Room",
         "story": "Het achtergrondverhaal...",
@@ -55,11 +56,11 @@ export async function POST(req: Request) {
 
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const jsonText = response.text();
+    const rawText = response.text();
     
-    // Verwijder markdown codeblok-indicators
-    const cleanedJsonText = jsonText.replace(/```json\n?|```/g, '');
-    const escapeRoomData = JSON.parse(cleanedJsonText);
+    // Functie om JSON uit de tekst te extraheren
+    const jsonString = rawText.substring(rawText.indexOf('{'), rawText.lastIndexOf('}') + 1);
+    const escapeRoomData = JSON.parse(jsonString);
 
     return NextResponse.json(escapeRoomData);
   } catch (error) {

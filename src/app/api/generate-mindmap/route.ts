@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
-    const { baseContent, didactics, pedagogy } = await req.json();
+    const { baseContent, didactics, pedagogy, level } = await req.json();
 
     if (!baseContent) {
       return NextResponse.json({ error: 'Basis content is vereist' }, { status: 400 });
@@ -15,12 +15,16 @@ export async function POST(req: NextRequest) {
     
     const didacticsText = didactics ? `De vakdidactiek is: ${didactics}.` : '';
     const pedagogyText = pedagogy ? `Houd rekening met de volgende pedagogische aanpak: ${pedagogy}.` : '';
+    const levelText = level ? `Het gevraagde niveau is: ${level}. Pas de hiërarchie, het detailniveau en de complexiteit van de mindmap hierop aan.` : '';
 
     const prompt = `
       Je bent een expert in het structureren van informatie. Jouw taak is om een hiërarchische mindmap te genereren op basis van de volgende leerstof.
 
       ${didacticsText}
       ${pedagogyText}
+      ${levelText}
+
+      Structureer de output als een JSON-object. Begin je antwoord direct met de '{' en eindig met '}'. Voeg geen inleidende tekst, commentaar of markdown-blokken toe. De output moet direct parseerbaar zijn als JSON.
 
       Leerstof:
       """
@@ -48,11 +52,11 @@ export async function POST(req: NextRequest) {
 
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const jsonText = response.text();
+    const rawText = response.text();
     
-    // Verwijder markdown codeblok-indicators
-    const cleanedJsonText = jsonText.replace(/```json\n?|```/g, '');
-    const mindmapData = JSON.parse(cleanedJsonText);
+    // Functie om JSON uit de tekst te extraheren
+    const jsonString = rawText.substring(rawText.indexOf('{'), rawText.lastIndexOf('}') + 1);
+    const mindmapData = JSON.parse(jsonString);
 
     return NextResponse.json({ mindmap: mindmapData });
 
