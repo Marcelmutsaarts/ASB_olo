@@ -9,6 +9,8 @@ import ChatbotSettings from '@/components/ChatbotSettings';
 import Flashcards from '@/components/Flashcards';
 import Mindmap from '@/components/Mindmap';
 import EscapeRoom from '@/components/EscapeRoom';
+import Oefentoets from '@/components/Oefentoets';
+import ThirtySeconds from '@/components/ThirtySeconds';
 
 // Definieer de datatypes voor de props
 interface FlashcardData {
@@ -89,8 +91,8 @@ export default function HomePage() {
     chatbot: true,
     flashcards: true,
     mindmap: true,
-    quiz: false,
-    samenvatting: false,
+    oefentoets: false,
+    thirtyseconds: false,
     presentatie: false,
     escaperoom: true,
   });
@@ -103,10 +105,16 @@ export default function HomePage() {
   const [flashcardsData, setFlashcardsData] = useState<FlashcardData[]>([]);
   const [mindmapData, setMindmapData] = useState<MindmapData | null>(null);
   const [escapeRoomData, setEscapeRoomData] = useState<any | null>(null);
+  const [oefentoetsData, setOefentoetsData] = useState<any | null>(null);
+  const [thirtySecondsData, setThirtySecondsData] = useState<any | null>(null);
 
   // Nieuwe state voor Escape Room instellingen
   const [escapeRoomTime, setEscapeRoomTime] = useState(20); // Default 20 minuten
   const [escapeRoomQuestions, setEscapeRoomQuestions] = useState(5); // Default 5 vragen
+
+  // Nieuwe state voor Oefentoets instellingen
+  const [testQuestions, setTestQuestions] = useState(10);
+  const [testType, setTestType] = useState<'mc3' | 'mc4' | 'true-false'>('mc4');
 
   const getSelectedAppsCount = () => {
     return Object.values(selectedApps).filter(Boolean).length;
@@ -144,6 +152,30 @@ export default function HomePage() {
         }).then(res => res.json())
       });
     }
+    if (selectedApps.thirtyseconds) {
+      generationPromises.push({
+        id: 'thirtyseconds',
+        promise: fetch('/api/generate-30seconds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyPayload),
+        }).then(res => res.json())
+      });
+    }
+    if (selectedApps.oefentoets) {
+      generationPromises.push({
+        id: 'oefentoets',
+        promise: fetch('/api/generate-oefentoets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            ...bodyPayload,
+            testQuestions,
+            testType,
+           }),
+        }).then(res => res.json())
+      });
+    }
     if (selectedApps.escaperoom) {
       generationPromises.push({
         id: 'escaperoom',
@@ -165,6 +197,8 @@ export default function HomePage() {
       let newFlashcardsData: FlashcardData[] = [];
       let newMindmapData: MindmapData | null = null;
       let newEscapeRoomData: any | null = null;
+      let newOefentoetsData: any | null = null;
+      let newThirtySecondsData: any | null = null;
       
       results.forEach((result, index) => {
         const appId = generationPromises[index].id;
@@ -176,11 +210,15 @@ export default function HomePage() {
         if (appId === 'flashcards') newFlashcardsData = result.flashcards || [];
         if (appId === 'mindmap') newMindmapData = result.mindmap || null;
         if (appId === 'escaperoom') newEscapeRoomData = result || null;
+        if (appId === 'oefentoets') newOefentoetsData = result.testData || null;
+        if (appId === 'thirtyseconds') newThirtySecondsData = result.gameData || null;
       });
 
       setFlashcardsData(newFlashcardsData);
       setMindmapData(newMindmapData);
       setEscapeRoomData(newEscapeRoomData);
+      setOefentoetsData(newOefentoetsData);
+      setThirtySecondsData(newThirtySecondsData);
 
     } catch (e: any) {
       console.error("Fout bij het genereren van apps:", e);
@@ -195,6 +233,8 @@ export default function HomePage() {
     setFlashcardsData([]);
     setMindmapData(null);
     setEscapeRoomData(null);
+    setOefentoetsData(null);
+    setThirtySecondsData(null);
     setGenerationError(null);
   };
 
@@ -208,8 +248,8 @@ export default function HomePage() {
         flashcards: { name: 'Flashcards', icon: '📋' },
         mindmap: { name: 'Mindmap', icon: '🧠' },
         escaperoom: { name: 'Escape Room', icon: '⏳' },
-        quiz: { name: 'Quiz', icon: '❓' },
-        samenvatting: { name: 'Samenvatting', icon: '📝' },
+        oefentoets: { name: 'Oefentoets', icon: '❓' },
+        thirtyseconds: { name: '30 Seconds', icon: '⏱️' },
         presentatie: { name: 'Presentatie', icon: '📽️' },
     };
 
@@ -304,13 +344,18 @@ export default function HomePage() {
                 {activeTab === 'escaperoom' && (
                   <EscapeRoom data={escapeRoomData} />
                 )}
-                {(activeTab === 'quiz' || activeTab === 'samenvatting' || activeTab === 'presentatie') && (
-                    <div className="w-full max-w-4xl mx-auto p-8 text-center bg-white rounded-lg shadow-lg">
-                        <div className="text-4xl mb-4">{appDetails[activeTab].icon}</div>
-                        <h3 className="text-2xl font-semibold text-gray-800 mb-2">{appDetails[activeTab].name}</h3>
-                        <p className="text-gray-600">Deze functionaliteit is binnenkort beschikbaar.</p>
-                    </div>
+                {activeTab === 'oefentoets' && (
+                  <Oefentoets data={oefentoetsData} />
                 )}
+                {activeTab === 'thirtyseconds' && (
+                  <ThirtySeconds data={thirtySecondsData} />
+                )}
+                {activeTab === 'presentatie' && (
+                     <div className="w-full max-w-4xl mx-auto p-8 text-center bg-white rounded-lg shadow-lg">
+                         <div className="text-4xl mb-4">{appDetails[activeTab].icon}</div>
+                         <h3 className="text-2xl font-semibold">{appDetails[activeTab].name} wordt voorbereid...</h3>
+                     </div>
+                 )}
               </>
             )}
           </main>
@@ -433,6 +478,54 @@ export default function HomePage() {
                         {escapeRoomQuestions}
                       </span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Oefentoets Specifieke Instellingen */}
+            {selectedApps.oefentoets && (
+              <div className="w-full max-w-7xl mt-10 p-8 bg-gradient-to-br from-blue-50 via-green-50 to-teal-50 rounded-2xl shadow-inner border border-white/80 animate-fadeIn">
+                <h3 className="text-xl font-bold text-gray-700 mb-6 flex items-center">
+                  <span className="text-2xl mr-3">❓</span> Oefentoets Instellingen
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Aantal vragen instelling */}
+                  <div className="space-y-3">
+                    <label htmlFor="test-questions" className="block text-sm font-medium text-gray-600">
+                      Aantal vragen
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <input
+                        type="range"
+                        id="test-questions"
+                        min="1"
+                        max="20"
+                        step="1"
+                        value={testQuestions}
+                        onChange={(e) => setTestQuestions(Number(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="font-semibold text-blue-600 bg-white px-3 py-1 rounded-md shadow-sm border border-gray-200 min-w-[50px] text-center">
+                        {testQuestions}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Vraagvorm instelling */}
+                  <div className="space-y-3">
+                    <label htmlFor="test-type" className="block text-sm font-medium text-gray-600">
+                      Vraagvorm
+                    </label>
+                    <select
+                      id="test-type"
+                      value={testType}
+                      onChange={(e) => setTestType(e.target.value as 'mc3' | 'mc4' | 'true-false')}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    >
+                      <option value="mc4">Multiple choice (4 opties)</option>
+                      <option value="mc3">Multiple choice (3 opties)</option>
+                      <option value="true-false">Juist / Onjuist</option>
+                    </select>
                   </div>
                 </div>
               </div>

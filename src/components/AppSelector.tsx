@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { AppId, appCategories, appDetails } from '@/types/apps';
+import { AppId, appDetails, categories } from '@/types/apps';
+import { FiBox, FiCheck } from 'react-icons/fi';
 
 interface AppSelectorProps {
   selectedApps: Record<AppId, boolean>;
@@ -16,12 +17,12 @@ const AppSelector: React.FC<AppSelectorProps> = ({ selectedApps, setSelectedApps
   return (
     <div>
       <h2 className="text-2xl font-bold text-gray-800 mb-2">Selecteer Educatieve Apps</h2>
-      <p className="text-gray-600 mb-6">Kies welke apps je wilt genereren op basis van de leerstof.</p>
+      <p className="text-gray-600 mb-6">Selecteer de tools die je wilt creëren op basis van de leerstof.</p>
       <div className="space-y-8">
-        {Object.values(appCategories).map((category, index) => (
+        {Object.values(categories).map((category, index) => (
           <div key={index} className="p-6 bg-gray-50 rounded-2xl border border-gray-200">
              <div className="flex items-center mb-4">
-              <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-500 rounded-lg text-white">
+              <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-500 rounded-lg text-white text-2xl shadow-md">
                 <span className="text-2xl">{category.icon}</span>
               </div>
               <div className="ml-4">
