@@ -92,7 +92,7 @@ export default function HomePage() {
     quiz: false,
     samenvatting: false,
     presentatie: false,
-    escaperoom: false,
+    escaperoom: true,
   });
   const [isGenerated, setIsGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -103,6 +103,10 @@ export default function HomePage() {
   const [flashcardsData, setFlashcardsData] = useState<FlashcardData[]>([]);
   const [mindmapData, setMindmapData] = useState<MindmapData | null>(null);
   const [escapeRoomData, setEscapeRoomData] = useState<any | null>(null);
+
+  // Nieuwe state voor Escape Room instellingen
+  const [escapeRoomTime, setEscapeRoomTime] = useState(20); // Default 20 minuten
+  const [escapeRoomQuestions, setEscapeRoomQuestions] = useState(5); // Default 5 vragen
 
   const getSelectedAppsCount = () => {
     return Object.values(selectedApps).filter(Boolean).length;
@@ -146,7 +150,11 @@ export default function HomePage() {
         promise: fetch('/api/generate-escaperoom', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(bodyPayload),
+          body: JSON.stringify({ 
+            ...bodyPayload, 
+            time: escapeRoomTime, 
+            questions: escapeRoomQuestions 
+          }),
         }).then(res => res.json())
       });
     }
@@ -377,28 +385,75 @@ export default function HomePage() {
               </div>
             </div>
             
-            <div className="text-center pt-6 border-t border-gray-200">
-                <button
-                  onClick={handleGenerateClick}
-                  disabled={isGenerating || !baseContent.trim() || getSelectedAppsCount() === 0}
-                  className="w-full max-w-md bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold py-4 px-8 rounded-lg hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all shadow-lg text-lg"
-                >
-                  {isGenerating ? 'Bezig met genereren...' : '🚀 Genereer Leeromgeving'}
-                </button>
-                
-                {(!baseContent.trim() || getSelectedAppsCount() === 0) && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    {!baseContent.trim() && "Voer eerst leerinhoud in"}
-                    {!baseContent.trim() && getSelectedAppsCount() === 0 && " en "}
-                    {getSelectedAppsCount() === 0 && "selecteer minimaal één app"}
-                  </p>
-                )}
+            {/* Escape Room Specifieke Instellingen */}
+            {selectedApps.escaperoom && (
+              <div className="w-full max-w-7xl mt-10 p-8 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl shadow-inner border border-white/80 animate-fadeIn">
+                <h3 className="text-xl font-bold text-gray-700 mb-6 flex items-center">
+                  <span className="text-2xl mr-3">⏳</span> Escape Room Instellingen
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Tijd instelling */}
+                  <div className="space-y-3">
+                    <label htmlFor="escape-time" className="block text-sm font-medium text-gray-600">
+                      Speelduur (minuten)
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <input
+                        type="range"
+                        id="escape-time"
+                        min="0.5"
+                        max="60"
+                        step="0.5"
+                        value={escapeRoomTime}
+                        onChange={(e) => setEscapeRoomTime(Number(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="font-semibold text-indigo-600 bg-white px-3 py-1 rounded-md shadow-sm border border-gray-200 min-w-[50px] text-center">
+                        {escapeRoomTime}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Vragen instelling */}
+                  <div className="space-y-3">
+                    <label htmlFor="escape-questions" className="block text-sm font-medium text-gray-600">
+                      Aantal puzzels
+                    </label>
+                    <div className="flex items-center space-x-4">
+                       <input
+                        type="range"
+                        id="escape-questions"
+                        min="3"
+                        max="10"
+                        step="1"
+                        value={escapeRoomQuestions}
+                        onChange={(e) => setEscapeRoomQuestions(Number(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <span className="font-semibold text-indigo-600 bg-white px-3 py-1 rounded-md shadow-sm border border-gray-200 min-w-[50px] text-center">
+                        {escapeRoomQuestions}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Generate Button */}
+            <div className="mt-12 text-center">
+              <button
+                onClick={handleGenerateClick}
+                disabled={isGenerating || getSelectedAppsCount() === 0}
+                className="px-12 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-2xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-indigo-400 transition-all duration-300 shadow-xl hover:shadow-2xl disabled:bg-gray-400 disabled:from-gray-400 disabled:shadow-none disabled:cursor-not-allowed transform hover:-translate-y-1"
+              >
+                {isGenerating ? 'Moment, de AI is aan het werk...' : `Genereer ${getSelectedAppsCount()} App${getSelectedAppsCount() > 1 ? 's' : ''}`}
+              </button>
             </div>
+
           </div>
         </div>
 
         <footer className="text-center mt-12">
-          <p className="text-gray-500">Mogelijk gemaakt door AI voor Docenten.</p>
+          <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} AI voor Docenten. Alle rechten voorbehouden.</p>
         </footer>
       </div>
     </main>

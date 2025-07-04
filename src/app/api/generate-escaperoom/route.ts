@@ -5,9 +5,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 
 export async function POST(req: Request) {
   try {
-    const { baseContent, didactics, pedagogy, level } = await req.json();
+    const { baseContent, didactics, pedagogy, level, time, questions } = await req.json();
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const timeText = time ? `De totale speeltijd moet exact ${time} minuten zijn. Stem de moeilijkheid hierop af.` : 'De totale speeltijd is 15 minuten.';
+    const questionsText = questions ? `Het spel moet exact ${questions} puzzels/vragen bevatten.` : 'Het spel moet 4 puzzels/vragen bevatten.';
 
     const prompt = `
       Je bent een expert in het ontwerpen van educatieve games. Jouw taak is om een boeiende en uitdagende "Escape Room" te creëren op basis van de volgende leerstof.
@@ -22,16 +25,18 @@ export async function POST(req: Request) {
 
       **Instructies:**
       1.  **Thema en Verhaal:** Creëer een kort, meeslepend achtergrondverhaal dat past bij de leerstof. De student is "opgesloten" en moet ontsnappen door kennisvragen te beantwoorden.
-      2.  **Puzzels:** Genereer 3 tot 5 opeenvolgende puzzels. Elke puzzel moet een duidelijke vraag bevatten die direct gerelateerd is aan de leerstof. De moeilijkheidsgraad moet zijn afgestemd op het opgegeven Niveau.
+      2.  **Puzzels:** ${questionsText} Elke puzzel moet een duidelijke vraag bevatten die direct gerelateerd is aan de leerstof. De moeilijkheidsgraad moet zijn afgestemd op het opgegeven Niveau.
       3.  **Antwoorden:** Geef voor elke puzzel een exact, correct antwoord.
       4.  **Hints:** Geef voor elke puzzel 2-3 hints die de student op weg helpen zonder het antwoord direct te verklappen.
       5.  **Feedback:** Schrijf een korte, positieve feedbackboodschap voor als een student een puzzel correct oplost.
       6.  **Eindes:** Schrijf een "succes" boodschap voor als de student ontsnapt, en een "mislukt" boodschap voor als de tijd om is.
+      7.  **Tijd:** ${timeText}
 
       **Output Formaat:**
       Geef je antwoord ALLEEN in JSON-formaat. Begin je antwoord direct met de '{' en eindig met '}'. Voeg geen inleidende tekst, commentaar of markdown-blokken toe. De output moet direct parseerbaar zijn als JSON, volgens deze structuur:
       {
         "title": "Titel van de Escape Room",
+        "durationInMinutes": ${time || 15},
         "story": "Het achtergrondverhaal...",
         "puzzles": [
           {
@@ -50,7 +55,7 @@ export async function POST(req: Request) {
           }
         ],
         "successMessage": "Gefeliciteerd, je bent ontsnapt!",
-        "failureMessage": "Helaas, de tijd is om! De kamer is ontploft. Probeer het opnieuw."
+        "failureMessage": "Helaas, de tijd is om! Probeer het opnieuw."
       }
     `;
 

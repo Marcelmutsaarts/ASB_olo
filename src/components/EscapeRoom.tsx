@@ -17,6 +17,7 @@ interface EscapeRoomData {
   puzzles: Puzzle[];
   successMessage: string;
   failureMessage: string;
+  durationInMinutes?: number; // Optioneel, voor backwards compatibility
 }
 
 interface EscapeRoomProps {
@@ -31,12 +32,17 @@ const formatTime = (seconds: number) => {
 
 const EscapeRoom: React.FC<EscapeRoomProps> = ({ data }) => {
   const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minuten in seconden
+  const [timeLeft, setTimeLeft] = useState((data?.durationInMinutes || 10) * 60);
   const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
   const [isStarted, setIsStarted] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string }[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!data) return;
+    setTimeLeft((data.durationInMinutes || 10) * 60);
+  }, [data]);
 
   useEffect(() => {
     if (!isStarted || gameState !== 'playing') return;
