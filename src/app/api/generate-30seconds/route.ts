@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Basis content is vereist' }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `
       Je bent een expert in het maken van educatieve spellen. Jouw taak is om een set van minimaal 8 en idealiter 10 "30 Seconds" kaartjes te genereren op basis van de volgende leerstof. Het is cruciaal dat er voldoende kaartjes zijn om het spel leuk te maken.

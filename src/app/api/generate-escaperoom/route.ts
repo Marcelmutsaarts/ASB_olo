@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const { baseContent, didactics, pedagogy, level, time, questions } = await req.json();
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const timeText = time ? `De totale speeltijd moet exact ${time} minuten zijn. Stem de moeilijkheid hierop af.` : 'De totale speeltijd is 15 minuten.';
     const questionsText = questions ? `Het spel moet exact ${questions} puzzels/vragen bevatten.` : 'Het spel moet 4 puzzels/vragen bevatten.';

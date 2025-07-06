@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Vereiste velden ontbreken' }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `
       Je bent een slimme, behulpzame tutor. Jouw taak is om het antwoord van een student op een flashcard-vraag te beoordelen. Wees flexibel en kijk naar de betekenis, niet alleen naar de exacte woorden.

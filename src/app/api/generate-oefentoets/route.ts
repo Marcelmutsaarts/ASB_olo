@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Basis content is vereist' }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const didacticsText = didactics ? `De vakdidactiek is: ${didactics}.` : '';
     const pedagogyText = pedagogy ? `Houd rekening met de volgende pedagogische aanpak: ${pedagogy}.` : '';
