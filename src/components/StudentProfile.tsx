@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FiUser, FiLogOut, FiSettings, FiDownload, FiTrash2, FiAward } from 'react-icons/fi';
 import { useStudent } from '@/contexts/StudentContext';
 
@@ -47,13 +48,17 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
     }
   }, [showDropdown]);
 
-  // Simplified click outside handling without portal complications
+  // Click outside handling with portal support
   useEffect(() => {
     if (showDropdown) {
       const handleClickOutside = (event: MouseEvent) => {
         const target = event.target as Node;
         if (buttonRef.current && !buttonRef.current.contains(target)) {
-          setShowDropdown(false);
+          // Check if click is inside dropdown (portal rendered)
+          const dropdownElement = document.querySelector('[data-dropdown-content]');
+          if (!dropdownElement || !dropdownElement.contains(target)) {
+            setShowDropdown(false);
+          }
         }
       };
 
@@ -163,8 +168,8 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
         </button>
       </div>
 
-      {/* Dropdown rendered with fixed positioning for high z-index */}
-      {mounted && showDropdown && (
+      {/* Dropdown rendered via portal for proper z-index */}
+      {mounted && showDropdown && typeof window !== 'undefined' && createPortal(
         <>
           {/* Backdrop */}
           <div 
@@ -256,7 +261,8 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
               </p>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );
