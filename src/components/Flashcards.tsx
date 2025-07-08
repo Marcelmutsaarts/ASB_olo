@@ -22,6 +22,7 @@ interface Sm2Flashcard extends Flashcard {
 
 interface FlashcardsProps {
   data: Flashcard[];
+  baseContent?: string;
 }
 
 interface FlashcardProgress {
@@ -326,7 +327,7 @@ const TestMode: React.FC<{ deck: Sm2Flashcard[], setDeck: React.Dispatch<React.S
 
 
 // De Flashcards component is de 'wrapper' die de modus en state beheert
-const Flashcards: React.FC<FlashcardsProps> = ({ data }) => {
+const Flashcards: React.FC<FlashcardsProps> = ({ data, baseContent = '' }) => {
   const { currentStudent } = useStudent();
   const [mode, setMode] = useState<'choice' | 'study' | 'test'>('choice');
   const [flashcardSet, setFlashcardSet] = useState<Flashcard[]>([]);
@@ -341,7 +342,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ data }) => {
       
       // Load saved progress or create initial deck
       if (currentStudent) {
-        const presentationId = StudentStorage.generatePresentationId(JSON.stringify(data).substring(0, 50));
+        const presentationId = StudentStorage.generatePresentationId(baseContent || 'flashcards');
         const savedProgress = StudentProgress.load(currentStudent.id, presentationId);
         
         if (savedProgress?.sm2Cards) {

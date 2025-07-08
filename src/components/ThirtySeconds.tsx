@@ -18,9 +18,10 @@ interface ThirtySecondsData {
 
 interface ThirtySecondsProps {
   data: ThirtySecondsData | null;
+  baseContent?: string;
 }
 
-const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
+const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data, baseContent = '' }) => {
   const { currentStudent } = useStudent();
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'round_finished' | 'all_cards_finished'>('idle');
   const [shuffledDeck, setShuffledDeck] = useState<Card[]>([]);
@@ -34,7 +35,7 @@ const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
   // Load student progress when component mounts or student changes
   useEffect(() => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const savedProgress = StudentProgress.load(currentStudent.id, presentationId);
       
       if (savedProgress?.thirtySecondsProgress) {
@@ -53,7 +54,7 @@ const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
 
   const saveProgress = () => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const progress = {
         thirtySecondsProgress: {
           currentCard: currentCardIndex,

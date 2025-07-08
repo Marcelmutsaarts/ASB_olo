@@ -20,9 +20,10 @@ interface OefentoetsData {
 
 interface OefentoetsProps {
   data: OefentoetsData | null;
+  baseContent?: string;
 }
 
-const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
+const Oefentoets: React.FC<OefentoetsProps> = ({ data, baseContent = '' }) => {
   const { currentStudent } = useStudent();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -39,7 +40,7 @@ const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
   // Load student progress when component mounts or student changes
   useEffect(() => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const savedProgress = StudentProgress.load(currentStudent.id, presentationId);
       
       if (savedProgress?.testProgress) {
@@ -62,7 +63,7 @@ const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
 
   const loadChatHistory = (questionIndex: number) => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const chatData = StudentChat.load(currentStudent.id, presentationId, `question_${questionIndex}`);
       setChatHistory(chatData.map((msg: any) => ({
         role: msg.role === 'assistant' ? 'model' : msg.role,
@@ -73,7 +74,7 @@ const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
 
   const saveProgress = () => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const progress = {
         testProgress: {
           currentQuestion: currentQuestionIndex,
@@ -89,7 +90,7 @@ const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
 
   const saveChatHistory = (history: { role: 'user' | 'model', text: string }[]) => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const chatData = history.map(msg => ({
         role: msg.role === 'model' ? 'assistant' : msg.role,
         content: msg.text
@@ -158,7 +159,7 @@ const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
     
     // Clear saved progress
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       StudentProgress.save(currentStudent.id, presentationId, {
         testProgress: {
           currentQuestion: 0,

@@ -25,6 +25,7 @@ interface EscapeRoomData {
 
 interface EscapeRoomProps {
   data: EscapeRoomData | null;
+  baseContent?: string;
 }
 
 const formatTime = (seconds: number) => {
@@ -33,7 +34,7 @@ const formatTime = (seconds: number) => {
   return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-const EscapeRoom: React.FC<EscapeRoomProps> = ({ data }) => {
+const EscapeRoom: React.FC<EscapeRoomProps> = ({ data, baseContent = '' }) => {
   const { currentStudent } = useStudent();
   const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState((data?.durationInMinutes || 10) * 60);
@@ -47,7 +48,7 @@ const EscapeRoom: React.FC<EscapeRoomProps> = ({ data }) => {
   // Load student progress when component mounts or student changes
   useEffect(() => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const savedProgress = StudentProgress.load(currentStudent.id, presentationId);
       
       if (savedProgress?.escapeRoomProgress) {
@@ -76,7 +77,7 @@ const EscapeRoom: React.FC<EscapeRoomProps> = ({ data }) => {
 
   const loadChatHistory = (puzzleIndex: number) => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const chatData = StudentChat.load(currentStudent.id, presentationId, `puzzle_${puzzleIndex}`);
       setMessages(chatData.map((msg: any) => ({
         role: msg.role === 'assistant' ? 'model' : msg.role,
@@ -87,7 +88,7 @@ const EscapeRoom: React.FC<EscapeRoomProps> = ({ data }) => {
 
   const saveProgress = () => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const progress = {
         escapeRoomProgress: {
           currentPuzzle: currentPuzzleIndex,
@@ -103,7 +104,7 @@ const EscapeRoom: React.FC<EscapeRoomProps> = ({ data }) => {
 
   const saveChatHistory = (history: { role: 'user' | 'model', text: string }[]) => {
     if (currentStudent && data) {
-      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const presentationId = StudentStorage.generatePresentationId(baseContent || data.title);
       const chatData = history.map(msg => ({
         role: msg.role === 'model' ? 'assistant' : msg.role,
         content: msg.text

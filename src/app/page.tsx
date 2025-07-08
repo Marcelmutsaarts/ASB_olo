@@ -371,19 +371,19 @@ function HomePage() {
                   />
                 )}
                 {activeTab === 'flashcards' && (
-                  <Flashcards data={flashcardsData} />
+                  <Flashcards data={flashcardsData} baseContent={baseContent} />
                 )}
                 {activeTab === 'mindmap' && (
                   <Mindmap data={mindmapData} />
                 )}
                 {activeTab === 'escaperoom' && (
-                  <EscapeRoom data={escapeRoomData} />
+                  <EscapeRoom data={escapeRoomData} baseContent={baseContent} />
                 )}
                 {activeTab === 'oefentoets' && (
-                  <Oefentoets data={oefentoetsData} />
+                  <Oefentoets data={oefentoetsData} baseContent={baseContent} />
                 )}
                 {activeTab === 'thirtyseconds' && (
-                  <ThirtySeconds data={thirtySecondsData} />
+                  <ThirtySeconds data={thirtySecondsData} baseContent={baseContent} />
                 )}
                 {activeTab === 'presentatie' && (
                   <Presentatie 

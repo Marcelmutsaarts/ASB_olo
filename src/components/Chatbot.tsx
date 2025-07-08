@@ -28,7 +28,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy, lev
   // Load chat history when student changes
   useEffect(() => {
     if (currentStudent && baseContent) {
-      const presentationId = StudentStorage.generatePresentationId(baseContent.substring(0, 50));
+      const presentationId = StudentStorage.generatePresentationId(baseContent);
       const chatHistory = StudentChat.load(currentStudent.id, presentationId, 'main');
       if (chatHistory.length > 0) {
         setMessages(chatHistory.map((msg: any) => ({
@@ -65,7 +65,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy, lev
       
       // Save welcome message for student
       if (currentStudent) {
-        const presentationId = StudentStorage.generatePresentationId(baseContent.substring(0, 50));
+        const presentationId = StudentStorage.generatePresentationId(baseContent);
         const chatHistory = [{
           role: 'assistant',
           content: data.welcomeMessage
@@ -114,7 +114,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy, lev
       
       // Save chat history for student
       if (currentStudent) {
-        const presentationId = StudentStorage.generatePresentationId(baseContent.substring(0, 50));
+        const presentationId = StudentStorage.generatePresentationId(baseContent);
         const chatHistory = finalMessages.map(msg => ({
           role: msg.role === 'model' ? 'assistant' : msg.role,
           content: msg.text
@@ -128,7 +128,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy, lev
       
       // Save even error messages for student
       if (currentStudent) {
-        const presentationId = StudentStorage.generatePresentationId(baseContent.substring(0, 50));
+        const presentationId = StudentStorage.generatePresentationId(baseContent);
         const chatHistory = finalMessages.map(msg => ({
           role: msg.role === 'model' ? 'assistant' : msg.role,
           content: msg.text
