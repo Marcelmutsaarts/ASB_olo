@@ -28,10 +28,16 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
   };
 
   const handleExportData = () => {
-    const studentData = {
+    const studentData: {
+      student: typeof currentStudent;
+      exportDate: string;
+      presentation: string | undefined;
+      data: Record<string, any>;
+    } = {
       student: currentStudent,
       exportDate: new Date().toISOString(),
-      presentation: presentationTitle
+      presentation: presentationTitle,
+      data: {}
     };
 
     // Collect all student data from localStorage
