@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiCheckCircle, FiXCircle, FiMessageSquare, FiAward } from 'react-icons/fi';
+import { useStudent } from '@/contexts/StudentContext';
+import { StudentProgress, StudentChat } from '@/utils/studentStorage';
+import StudentStorage from '@/utils/studentStorage';
 
 interface Question {
   questionText: string;
@@ -20,16 +23,80 @@ interface OefentoetsProps {
 }
 
 const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
+  const { currentStudent } = useStudent();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [answers, setAnswers] = useState<(number | null)[]>([]);
   
   // State voor de chat-functionaliteit
   const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model', text: string }[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
+
+  // Load student progress when component mounts or student changes
+  useEffect(() => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const savedProgress = StudentProgress.load(currentStudent.id, presentationId);
+      
+      if (savedProgress?.testProgress) {
+        setCurrentQuestionIndex(savedProgress.testProgress.currentQuestion || 0);
+        setScore(savedProgress.testProgress.score || 0);
+        setAnswers(savedProgress.testProgress.answers || []);
+        setIsFinished(savedProgress.testProgress.isFinished || false);
+      } else {
+        // Initialize answers array
+        setAnswers(new Array(data.questions.length).fill(null));
+      }
+      
+      // Load chat history for current question
+      loadChatHistory(savedProgress?.testProgress?.currentQuestion || 0);
+    } else if (data) {
+      // Initialize for non-logged in users
+      setAnswers(new Array(data.questions.length).fill(null));
+    }
+  }, [currentStudent, data]);
+
+  const loadChatHistory = (questionIndex: number) => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const chatData = StudentChat.load(currentStudent.id, presentationId, `question_${questionIndex}`);
+      setChatHistory(chatData.map((msg: any) => ({
+        role: msg.role === 'assistant' ? 'model' : msg.role,
+        text: msg.content || msg.text
+      })));
+    }
+  };
+
+  const saveProgress = () => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const progress = {
+        testProgress: {
+          currentQuestion: currentQuestionIndex,
+          score,
+          answers,
+          isFinished,
+          lastAnswered: new Date().toISOString()
+        }
+      };
+      StudentProgress.save(currentStudent.id, presentationId, progress);
+    }
+  };
+
+  const saveChatHistory = (history: { role: 'user' | 'model', text: string }[]) => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const chatData = history.map(msg => ({
+        role: msg.role === 'model' ? 'assistant' : msg.role,
+        content: msg.text
+      }));
+      StudentChat.save(currentStudent.id, presentationId, chatData, `question_${currentQuestionIndex}`);
+    }
+  };
 
   if (!data || !data.questions || data.questions.length === 0) {
     return (
@@ -45,21 +112,38 @@ const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
     const currentQuestion = data.questions[currentQuestionIndex];
     setSelectedAnswer(index);
     setShowFeedback(true);
+    
+    // Update answers array
+    const newAnswers = [...answers];
+    newAnswers[currentQuestionIndex] = index;
+    setAnswers(newAnswers);
+    
     if (index === currentQuestion.correctOptionIndex) {
       setScore(prev => prev + 1);
     }
+    
+    // Save progress
+    saveProgress();
+    
     // Start de chat met een lege geschiedenis, de initiële feedback wordt apart getoond.
     setChatHistory([]);
   };
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < data.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedAnswer(null);
-      setShowFeedback(false);
-      setChatHistory([]); // Reset chat voor volgende vraag
+      const nextIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(nextIndex);
+      setSelectedAnswer(answers[nextIndex]);
+      setShowFeedback(answers[nextIndex] !== null);
+      
+      // Load chat history for next question
+      loadChatHistory(nextIndex);
+      
+      // Save progress
+      saveProgress();
     } else {
       setIsFinished(true);
+      saveProgress();
     }
   };
   
@@ -69,7 +153,27 @@ const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
     setShowFeedback(false);
     setScore(0);
     setIsFinished(false);
+    setAnswers(data ? new Array(data.questions.length).fill(null) : []);
     setChatHistory([]);
+    
+    // Clear saved progress
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      StudentProgress.save(currentStudent.id, presentationId, {
+        testProgress: {
+          currentQuestion: 0,
+          score: 0,
+          answers: new Array(data.questions.length).fill(null),
+          isFinished: false,
+          lastAnswered: new Date().toISOString()
+        }
+      });
+      
+      // Clear all chat histories
+      for (let i = 0; i < data.questions.length; i++) {
+        StudentChat.save(currentStudent.id, presentationId, [], `question_${i}`);
+      }
+    }
   }
 
   const handleSendChatMessage = async () => {
@@ -95,11 +199,19 @@ const Oefentoets: React.FC<OefentoetsProps> = ({ data }) => {
       });
 
       const { response } = await res.json();
-      setChatHistory(prev => [...prev, { role: 'model', text: response }]);
+      const updatedHistory = [...newHistory, { role: 'model' as const, text: response }];
+      setChatHistory(updatedHistory);
+      
+      // Save chat history
+      saveChatHistory(updatedHistory);
 
     } catch (error) {
       console.error(error);
-      setChatHistory(prev => [...prev, { role: 'model', text: 'Sorry, de tutor heeft technische problemen.' }]);
+      const errorHistory = [...newHistory, { role: 'model' as const, text: 'Sorry, de tutor heeft technische problemen.' }];
+      setChatHistory(errorHistory);
+      
+      // Save even error messages
+      saveChatHistory(errorHistory);
     } finally {
       setIsChatLoading(false);
     }

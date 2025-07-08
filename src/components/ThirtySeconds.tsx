@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { FiPlay, FiCheck, FiX, FiRefreshCw, FiAward } from 'react-icons/fi';
+import { useStudent } from '@/contexts/StudentContext';
+import { StudentProgress } from '@/utils/studentStorage';
+import StudentStorage from '@/utils/studentStorage';
 
 interface Card {
   id: number;
@@ -18,12 +21,52 @@ interface ThirtySecondsProps {
 }
 
 const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
+  const { currentStudent } = useStudent();
   const [gameState, setGameState] = useState<'idle' | 'playing' | 'round_finished' | 'all_cards_finished'>('idle');
   const [shuffledDeck, setShuffledDeck] = useState<Card[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
   const [score, setScore] = useState(0);
   const [termStatus, setTermStatus] = useState<('unanswered' | 'correct' | 'pass')[]>([]);
+  const [totalScore, setTotalScore] = useState(0);
+  const [roundsPlayed, setRoundsPlayed] = useState(0);
+
+  // Load student progress when component mounts or student changes
+  useEffect(() => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const savedProgress = StudentProgress.load(currentStudent.id, presentationId);
+      
+      if (savedProgress?.thirtySecondsProgress) {
+        setCurrentCardIndex(savedProgress.thirtySecondsProgress.currentCard || 0);
+        setTotalScore(savedProgress.thirtySecondsProgress.totalScore || 0);
+        setRoundsPlayed(savedProgress.thirtySecondsProgress.roundsPlayed || 0);
+        setGameState(savedProgress.thirtySecondsProgress.gameState || 'idle');
+        
+        // Restore shuffled deck if available
+        if (savedProgress.thirtySecondsProgress.shuffledDeck) {
+          setShuffledDeck(savedProgress.thirtySecondsProgress.shuffledDeck);
+        }
+      }
+    }
+  }, [currentStudent, data]);
+
+  const saveProgress = () => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const progress = {
+        thirtySecondsProgress: {
+          currentCard: currentCardIndex,
+          totalScore,
+          roundsPlayed,
+          gameState,
+          shuffledDeck,
+          lastPlayed: new Date().toISOString()
+        }
+      };
+      StudentProgress.save(currentStudent.id, presentationId, progress);
+    }
+  };
 
   const shuffleDeck = (deck: Card[]) => {
     const shuffled = [...deck];
@@ -32,14 +75,15 @@ const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     setShuffledDeck(shuffled);
+    saveProgress();
   };
 
   useEffect(() => {
-    if (data && data.cards) {
+    if (data && data.cards && shuffledDeck.length === 0) {
       shuffleDeck(data.cards);
       setCurrentCardIndex(0);
     }
-  }, [data]);
+  }, [data, shuffledDeck.length]);
 
   useEffect(() => {
     if (gameState === 'playing' && timeLeft > 0) {
@@ -47,14 +91,18 @@ const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
       return () => clearTimeout(timer);
     } else if (timeLeft === 0 && gameState === 'playing') {
       setGameState('round_finished');
+      setTotalScore(prev => prev + score);
+      setRoundsPlayed(prev => prev + 1);
+      saveProgress();
     }
-  }, [gameState, timeLeft]);
+  }, [gameState, timeLeft, score]);
 
   const startRound = () => {
     setTimeLeft(30);
     setScore(0);
     setGameState('playing');
     setTermStatus(new Array(shuffledDeck[currentCardIndex].terms.length).fill('unanswered'));
+    saveProgress();
   };
   
   const handleNextCard = () => {
@@ -65,12 +113,18 @@ const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
       setCurrentCardIndex(nextIndex);
       setGameState('idle');
     }
+    saveProgress();
   }
 
   const restartGame = () => {
-    shuffleDeck(shuffledDeck);
+    if (data?.cards) {
+      shuffleDeck(data.cards);
+    }
     setCurrentCardIndex(0);
     setGameState('idle');
+    setTotalScore(0);
+    setRoundsPlayed(0);
+    saveProgress();
   };
 
   const handleTermClick = (index: number, newStatus: 'correct' | 'pass') => {
@@ -100,6 +154,9 @@ const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
       <div className="w-full max-w-2xl mx-auto p-8 text-center bg-white rounded-2xl shadow-xl">
         <h2 className="text-3xl font-bold text-gray-800 mb-2">{data.title}</h2>
         <p className="text-lg text-gray-600 mb-2">Kaart {currentCardIndex + 1} van {shuffledDeck.length}</p>
+        {roundsPlayed > 0 && (
+          <p className="text-lg text-blue-600 mb-2">Totaalscore: {totalScore} ({roundsPlayed} rondes)</p>
+        )}
         <p className="text-lg text-gray-600 mb-8">Klaar voor de volgende ronde?</p>
         <button
           onClick={startRound}
@@ -116,7 +173,8 @@ const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
      <div className="w-full max-w-2xl mx-auto p-8 text-center bg-white rounded-2xl shadow-xl">
        <FiAward className="text-6xl text-yellow-500 mx-auto mb-4" />
        <h2 className="text-3xl font-bold text-gray-800 mb-2">Alle kaarten gespeeld!</h2>
-       <p className="text-lg text-gray-600 mb-8">Goed gedaan! Je hebt de hele set voltooid.</p>
+       <p className="text-lg text-gray-600 mb-4">Goed gedaan! Je hebt de hele set voltooid.</p>
+       <p className="text-2xl text-blue-600 mb-8">Eindscore: {totalScore} punten</p>
        <button
          onClick={restartGame}
          className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg"
@@ -132,8 +190,11 @@ const ThirtySeconds: React.FC<ThirtySecondsProps> = ({ data }) => {
       <div className="w-full max-w-2xl mx-auto p-8 text-center bg-white rounded-2xl shadow-xl">
         <FiAward className="text-6xl text-yellow-500 mx-auto mb-4" />
         <h2 className="text-3xl font-bold text-gray-800 mb-2">Tijd is om!</h2>
-        <p className="text-4xl text-gray-600 mb-8">
-          Score: <span className="font-bold text-green-600">{score}</span>
+        <p className="text-3xl text-gray-600 mb-4">
+          Ronde score: <span className="font-bold text-green-600">{score}</span>
+        </p>
+        <p className="text-xl text-blue-600 mb-8">
+          Totaalscore: <span className="font-bold">{totalScore + score}</span>
         </p>
         <button
           onClick={handleNextCard}

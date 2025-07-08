@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { FiChevronLeft, FiChevronRight, FiCheckCircle, FiHelpCircle, FiAward, FiBookOpen, FiPlus } from 'react-icons/fi';
+import { useStudent } from '@/contexts/StudentContext';
+import { StudentProgress } from '@/utils/studentStorage';
+import StudentStorage from '@/utils/studentStorage';
 
 // Originele data structuur
 interface Flashcard {
@@ -19,6 +22,12 @@ interface Sm2Flashcard extends Flashcard {
 
 interface FlashcardsProps {
   data: Flashcard[];
+}
+
+interface FlashcardProgress {
+  studyProgress: Record<number, boolean>; // welke kaarten zijn bestudeerd
+  sm2Cards: Sm2Flashcard[]; // SM-2 data voor overhoren
+  lastStudied: string;
 }
 
 // --- Componenten buiten de hoofd-component geplaatst om hoisting problemen te voorkomen ---
@@ -134,7 +143,7 @@ const StudyMode: React.FC<{ data: Flashcard[], onBack: () => void }> = ({ data, 
 };
 
 // De "Overhoren" modus component
-const TestMode: React.FC<{ deck: Sm2Flashcard[], setDeck: React.Dispatch<React.SetStateAction<Sm2Flashcard[]>>, onBack: () => void }> = ({ deck, setDeck, onBack }) => {
+const TestMode: React.FC<{ deck: Sm2Flashcard[], setDeck: React.Dispatch<React.SetStateAction<Sm2Flashcard[]>>, onBack: () => void, saveProgress: (deck: Sm2Flashcard[]) => void }> = ({ deck, setDeck, onBack, saveProgress }) => {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [isAnswered, setIsAnswered] = useState(false);
@@ -238,6 +247,9 @@ const TestMode: React.FC<{ deck: Sm2Flashcard[], setDeck: React.Dispatch<React.S
     cardToUpdate.easinessFactor = Math.max(1.3, cardToUpdate.easinessFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
     
     setDeck(updatedDeck);
+    
+    // Save progress automatically
+    saveProgress(updatedDeck);
 
     // Reset voor volgende kaart
     setUserAnswer('');
@@ -315,6 +327,7 @@ const TestMode: React.FC<{ deck: Sm2Flashcard[], setDeck: React.Dispatch<React.S
 
 // De Flashcards component is de 'wrapper' die de modus en state beheert
 const Flashcards: React.FC<FlashcardsProps> = ({ data }) => {
+  const { currentStudent } = useStudent();
   const [mode, setMode] = useState<'choice' | 'study' | 'test'>('choice');
   const [flashcardSet, setFlashcardSet] = useState<Flashcard[]>([]);
   const [testDeck, setTestDeck] = useState<Sm2Flashcard[]>([]);
@@ -325,16 +338,49 @@ const Flashcards: React.FC<FlashcardsProps> = ({ data }) => {
   useEffect(() => {
     if (data && data.length > 0) {
       setFlashcardSet(data);
-      const initialDeck = data.map((card, index) => ({
-        ...card,
-        id: index,
-        interval: 0,
-        repetitions: 0,
-        easinessFactor: 2.5,
-      }));
-      setTestDeck(initialDeck);
+      
+      // Load saved progress or create initial deck
+      if (currentStudent) {
+        const presentationId = StudentStorage.generatePresentationId(JSON.stringify(data).substring(0, 50));
+        const savedProgress = StudentProgress.load(currentStudent.id, presentationId);
+        
+        if (savedProgress?.sm2Cards) {
+          setTestDeck(savedProgress.sm2Cards);
+        } else {
+          const initialDeck = data.map((card, index) => ({
+            ...card,
+            id: index,
+            interval: 0,
+            repetitions: 0,
+            easinessFactor: 2.5,
+          }));
+          setTestDeck(initialDeck);
+        }
+      } else {
+        const initialDeck = data.map((card, index) => ({
+          ...card,
+          id: index,
+          interval: 0,
+          repetitions: 0,
+          easinessFactor: 2.5,
+        }));
+        setTestDeck(initialDeck);
+      }
     }
-  }, [data]);
+  }, [data, currentStudent]);
+
+  // Save progress function
+  const saveProgress = (updatedDeck: Sm2Flashcard[]) => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(JSON.stringify(data).substring(0, 50));
+      const progress: FlashcardProgress = {
+        studyProgress: {},
+        sm2Cards: updatedDeck,
+        lastStudied: new Date().toISOString()
+      };
+      StudentProgress.save(currentStudent.id, presentationId, progress);
+    }
+  };
 
   const handleAddCard = (e: React.FormEvent) => {
     e.preventDefault();
@@ -349,7 +395,12 @@ const Flashcards: React.FC<FlashcardsProps> = ({ data }) => {
           repetitions: 0,
           easinessFactor: 2.5,
         };
-        return [...currentDeck, newSm2Card];
+        const updatedDeck = [...currentDeck, newSm2Card];
+        
+        // Save progress when adding new card
+        saveProgress(updatedDeck);
+        
+        return updatedDeck;
       });
       setNewQuestion('');
       setNewAnswer('');
@@ -461,7 +512,7 @@ const Flashcards: React.FC<FlashcardsProps> = ({ data }) => {
 
         {mode === 'study' && <StudyMode data={flashcardSet} onBack={() => setMode('choice')} />}
         
-        {mode === 'test' && <TestMode deck={testDeck} setDeck={setTestDeck} onBack={() => setMode('choice')} />}
+        {mode === 'test' && <TestMode deck={testDeck} setDeck={setTestDeck} onBack={() => setMode('choice')} saveProgress={saveProgress} />}
       </div>
     </div>
   );

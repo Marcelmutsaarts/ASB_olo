@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useStudent } from '@/contexts/StudentContext';
+import { StudentProgress, StudentChat } from '@/utils/studentStorage';
+import StudentStorage from '@/utils/studentStorage';
 
 // Interfaces voor de data structuur
 interface Puzzle {
@@ -31,29 +34,110 @@ const formatTime = (seconds: number) => {
 };
 
 const EscapeRoom: React.FC<EscapeRoomProps> = ({ data }) => {
+  const { currentStudent } = useStudent();
   const [currentPuzzleIndex, setCurrentPuzzleIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState((data?.durationInMinutes || 10) * 60);
   const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
   const [isStarted, setIsStarted] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string }[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Load student progress when component mounts or student changes
+  useEffect(() => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const savedProgress = StudentProgress.load(currentStudent.id, presentationId);
+      
+      if (savedProgress?.escapeRoomProgress) {
+        setCurrentPuzzleIndex(savedProgress.escapeRoomProgress.currentPuzzle || 0);
+        setGameState(savedProgress.escapeRoomProgress.gameState || 'playing');
+        setIsStarted(savedProgress.escapeRoomProgress.isStarted || false);
+        setStartTime(savedProgress.escapeRoomProgress.startTime || null);
+        
+        // Calculate remaining time based on when the game was started
+        if (savedProgress.escapeRoomProgress.startTime && savedProgress.escapeRoomProgress.isStarted) {
+          const elapsedSeconds = Math.floor((Date.now() - savedProgress.escapeRoomProgress.startTime) / 1000);
+          const totalTime = (data.durationInMinutes || 10) * 60;
+          const remaining = Math.max(0, totalTime - elapsedSeconds);
+          setTimeLeft(remaining);
+          
+          if (remaining <= 0 && savedProgress.escapeRoomProgress.gameState === 'playing') {
+            setGameState('lost');
+          }
+        }
+        
+        // Load chat history for current puzzle
+        loadChatHistory(savedProgress.escapeRoomProgress.currentPuzzle || 0);
+      }
+    }
+  }, [currentStudent, data]);
+
+  const loadChatHistory = (puzzleIndex: number) => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const chatData = StudentChat.load(currentStudent.id, presentationId, `puzzle_${puzzleIndex}`);
+      setMessages(chatData.map((msg: any) => ({
+        role: msg.role === 'assistant' ? 'model' : msg.role,
+        text: msg.content || msg.text
+      })));
+    }
+  };
+
+  const saveProgress = () => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const progress = {
+        escapeRoomProgress: {
+          currentPuzzle: currentPuzzleIndex,
+          gameState,
+          isStarted,
+          startTime,
+          lastPlayed: new Date().toISOString()
+        }
+      };
+      StudentProgress.save(currentStudent.id, presentationId, progress);
+    }
+  };
+
+  const saveChatHistory = (history: { role: 'user' | 'model', text: string }[]) => {
+    if (currentStudent && data) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      const chatData = history.map(msg => ({
+        role: msg.role === 'model' ? 'assistant' : msg.role,
+        content: msg.text
+      }));
+      StudentChat.save(currentStudent.id, presentationId, chatData, `puzzle_${currentPuzzleIndex}`);
+    }
+  };
+
   useEffect(() => {
     if (!data) return;
-    setTimeLeft((data.durationInMinutes || 10) * 60);
-  }, [data]);
+    // Only reset time if no saved progress exists
+    if (!currentStudent || !startTime) {
+      setTimeLeft((data.durationInMinutes || 10) * 60);
+    }
+  }, [data, currentStudent, startTime]);
 
   useEffect(() => {
     if (!isStarted || gameState !== 'playing') return;
 
     if (timeLeft <= 0) {
       setGameState('lost');
+      saveProgress();
       return;
     }
 
     const timer = setInterval(() => {
-      setTimeLeft(prevTime => prevTime - 1);
+      setTimeLeft(prevTime => {
+        const newTime = prevTime - 1;
+        if (newTime <= 0) {
+          setGameState('lost');
+          saveProgress();
+        }
+        return newTime;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
@@ -86,17 +170,27 @@ const EscapeRoom: React.FC<EscapeRoomProps> = ({ data }) => {
         
         if (currentPuzzleIndex === data!.puzzles.length - 1) {
           setGameState('won');
+          saveProgress();
         } else {
-          setCurrentPuzzleIndex(prev => prev + 1);
+          const nextPuzzleIndex = currentPuzzleIndex + 1;
+          setCurrentPuzzleIndex(nextPuzzleIndex);
           setMessages([]); // Reset chat for next puzzle
+          saveProgress();
+          
+          // Load chat history for next puzzle
+          loadChatHistory(nextPuzzleIndex);
         }
       } else {
-        setMessages(prev => [...prev, { role: 'model', text: response }]);
+        const updatedHistory = [...newMessages, { role: 'model' as const, text: response }];
+        setMessages(updatedHistory);
+        saveChatHistory(updatedHistory);
       }
 
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'model', text: 'Sorry, de Game Master heeft technische problemen.' }]);
+      const errorHistory = [...newMessages, { role: 'model' as const, text: 'Sorry, de Game Master heeft technische problemen.' }];
+      setMessages(errorHistory);
+      saveChatHistory(errorHistory);
     } finally {
       setIsLoading(false);
     }
@@ -120,10 +214,15 @@ const EscapeRoom: React.FC<EscapeRoomProps> = ({ data }) => {
         <h2 className="text-4xl font-bold mb-4">{data.title}</h2>
         <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">{data.story}</p>
         <button 
-          onClick={() => setIsStarted(true)}
+          onClick={() => {
+            setIsStarted(true);
+            const now = Date.now();
+            setStartTime(now);
+            saveProgress();
+          }}
           className="px-8 py-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold rounded-xl shadow-lg hover:scale-105 transition-transform"
         >
-          Start de Escape Room
+          {currentStudent && startTime ? 'Hervat Escape Room' : 'Start de Escape Room'}
         </button>
       </div>
     )

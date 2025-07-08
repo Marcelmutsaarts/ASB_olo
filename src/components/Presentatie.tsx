@@ -132,6 +132,12 @@ const Presentatie: React.FC<PresentatieProps> = ({ data, baseContent = '', didac
           allChatData[slide.id] = chatHistory;
         }
       });
+      setSlidesChatHistory(allChatData);
+      
+      // Set chat messages for current slide if available
+      if (allChatData[data.slides[currentSlide]?.id]) {
+        setChatMessages(allChatData[data.slides[currentSlide].id]);
+      }
     }
   };
 

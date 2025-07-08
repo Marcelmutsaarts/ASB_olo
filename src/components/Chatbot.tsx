@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useStudent } from '@/contexts/StudentContext';
+import { StudentChat } from '@/utils/studentStorage';
+import StudentStorage from '@/utils/studentStorage';
 
 // Definieer types voor de berichten
 interface Message {
@@ -16,10 +19,26 @@ interface ChatbotProps {
 }
 
 const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy, level }) => {
+  const { currentStudent } = useStudent();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
+
+  // Load chat history when student changes
+  useEffect(() => {
+    if (currentStudent && baseContent) {
+      const presentationId = StudentStorage.generatePresentationId(baseContent.substring(0, 50));
+      const chatHistory = StudentChat.load(currentStudent.id, presentationId, 'main');
+      if (chatHistory.length > 0) {
+        setMessages(chatHistory.map((msg: any) => ({
+          role: msg.role === 'assistant' ? 'model' : msg.role,
+          text: msg.content || msg.text
+        })));
+        setIsStarted(true);
+      }
+    }
+  }, [currentStudent, baseContent]);
 
   // Functie om het gesprek te starten
   const handleStartConversation = async () => {
@@ -43,6 +62,16 @@ const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy, lev
       
       setMessages([welcomeMsg]);
       setIsStarted(true);
+      
+      // Save welcome message for student
+      if (currentStudent) {
+        const presentationId = StudentStorage.generatePresentationId(baseContent.substring(0, 50));
+        const chatHistory = [{
+          role: 'assistant',
+          content: data.welcomeMessage
+        }];
+        StudentChat.save(currentStudent.id, presentationId, chatHistory, 'main');
+      }
 
     } catch (error) {
       const errorMsg: Message = { role: 'model', text: 'Sorry, ik kon de openingsboodschap niet genereren. Controleer de API-instellingen.' };
@@ -80,10 +109,32 @@ const Chatbot: React.FC<ChatbotProps> = ({ baseContent, didactics, pedagogy, lev
       if (!response.ok) throw new Error('API call failed');
       const data = await response.json();
       const modelMessage: Message = { role: 'model', text: data.response };
-      setMessages(prev => [...prev, modelMessage]);
+      const finalMessages = [...newMessages, modelMessage];
+      setMessages(finalMessages);
+      
+      // Save chat history for student
+      if (currentStudent) {
+        const presentationId = StudentStorage.generatePresentationId(baseContent.substring(0, 50));
+        const chatHistory = finalMessages.map(msg => ({
+          role: msg.role === 'model' ? 'assistant' : msg.role,
+          content: msg.text
+        }));
+        StudentChat.save(currentStudent.id, presentationId, chatHistory, 'main');
+      }
     } catch (error) {
       const errorMessage: Message = { role: 'model', text: 'Sorry, er is iets misgegaan bij de communicatie met de AI.' };
-      setMessages(prev => [...prev, errorMessage]);
+      const finalMessages = [...newMessages, errorMessage];
+      setMessages(finalMessages);
+      
+      // Save even error messages for student
+      if (currentStudent) {
+        const presentationId = StudentStorage.generatePresentationId(baseContent.substring(0, 50));
+        const chatHistory = finalMessages.map(msg => ({
+          role: msg.role === 'model' ? 'assistant' : msg.role,
+          content: msg.text
+        }));
+        StudentChat.save(currentStudent.id, presentationId, chatHistory, 'main');
+      }
       console.error("Fout bij het aanroepen van de chat API:", error);
     } finally {
       setIsLoading(false);

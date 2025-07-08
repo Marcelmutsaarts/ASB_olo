@@ -109,12 +109,12 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 z-40" 
+            className="fixed inset-0 z-[9999]" 
             onClick={() => setShowDropdown(false)}
           />
           
           {/* Dropdown */}
-          <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+          <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 z-[10000] overflow-hidden">
             {/* Header */}
             <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 border-b border-gray-100">
               <div className="flex items-center gap-3">
