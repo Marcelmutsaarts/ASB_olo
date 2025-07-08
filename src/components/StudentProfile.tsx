@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FiUser, FiLogOut, FiSettings, FiDownload, FiTrash2, FiAward } from 'react-icons/fi';
+import { FiUser, FiLogOut, FiSettings, FiDownload, FiTrash2, FiAward, FiUpload } from 'react-icons/fi';
 import { useStudent } from '@/contexts/StudentContext';
 
 interface StudentProfileProps {
@@ -14,6 +14,7 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
   const { currentStudent, logout, clearStudentData } = useStudent();
   const [showDropdown, setShowDropdown] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const [mounted, setMounted] = useState(false);
 
@@ -125,6 +126,66 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
     setShowDropdown(false);
   };
 
+  const handleImportData = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    fileInputRef.current?.click();
+    setShowDropdown(false);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const importedData = JSON.parse(text);
+
+      // Validate the imported data structure
+      if (!importedData.student || !importedData.data || typeof importedData.data !== 'object') {
+        alert('Ongeldig bestandsformaat. Zorg ervoor dat je een geldig export bestand uploadt.');
+        return;
+      }
+
+      // Ask for confirmation before importing
+      const confirmMessage = `Wil je de gegevens van "${importedData.student.name}" importeren?\n\n` +
+        `Export datum: ${new Date(importedData.exportDate).toLocaleDateString('nl-NL')}\n` +
+        `Presentatie: ${importedData.presentation || 'Onbekend'}\n\n` +
+        `Dit zal je huidige gegevens overschrijven voor overlappende data.`;
+
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+
+      // Import the data by merging with current student's data
+      let importCount = 0;
+      Object.entries(importedData.data).forEach(([key, value]) => {
+        // Replace the student ID in the key with current student's ID
+        const originalStudentId = importedData.student.id;
+        const newKey = key.replace(`student_${originalStudentId}_`, `student_${currentStudent.id}_`);
+        
+        try {
+          localStorage.setItem(newKey, JSON.stringify(value));
+          importCount++;
+        } catch (error) {
+          console.warn(`Kon niet importeren: ${key}`, error);
+        }
+      });
+
+      alert(`Succesvol ${importCount} data items geïmporteerd!`);
+      
+      // Refresh the page to reload all imported data
+      window.location.reload();
+
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Fout bij het importeren van het bestand. Zorg ervoor dat het een geldig JSON bestand is.');
+    }
+
+    // Reset file input
+    e.target.value = '';
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -145,6 +206,15 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
 
   return (
     <>
+      {/* Hidden file input for importing data */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
+      
       <div className={`relative ${className}`}>
         <button
           ref={buttonRef}
@@ -226,6 +296,17 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
                 <div>
                   <p className="font-medium">Exporteer mijn gegevens</p>
                   <p className="text-xs text-gray-500">Download al je voortgang</p>
+                </div>
+              </button>
+
+              <button
+                onClick={handleImportData}
+                className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+              >
+                <FiUpload className="w-4 h-4 text-green-500" />
+                <div>
+                  <p className="font-medium">Importeer gegevens</p>
+                  <p className="text-xs text-gray-500">Laad voortgang uit bestand</p>
                 </div>
               </button>
 
