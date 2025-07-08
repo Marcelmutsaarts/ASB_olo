@@ -51,8 +51,13 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
   useEffect(() => {
     if (showDropdown) {
       const handleClickOutside = (event: MouseEvent) => {
-        if (buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
-          setShowDropdown(false);
+        const target = event.target as Node;
+        if (buttonRef.current && !buttonRef.current.contains(target)) {
+          // Check if click is inside dropdown
+          const dropdownElement = document.querySelector('[data-dropdown-content]');
+          if (!dropdownElement || !dropdownElement.contains(target)) {
+            setShowDropdown(false);
+          }
         }
       };
 
@@ -63,19 +68,25 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
 
   if (!currentStudent) return null;
 
-  const handleLogout = () => {
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     logout();
     setShowDropdown(false);
   };
 
-  const handleClearMyData = () => {
+  const handleClearMyData = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (confirm('Weet je zeker dat je al je gegevens wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) {
       clearStudentData(currentStudent.id);
     }
     setShowDropdown(false);
   };
 
-  const handleExportData = () => {
+  const handleExportData = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const studentData: {
       student: typeof currentStudent;
       exportDate: string;
@@ -138,16 +149,22 @@ const StudentProfile: React.FC<StudentProfileProps> = ({ presentationTitle, clas
         {/* Backdrop */}
         <div 
           className="fixed inset-0 z-[9999]" 
-          onClick={() => setShowDropdown(false)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowDropdown(false);
+          }}
         />
         
         {/* Dropdown */}
         <div 
+          data-dropdown-content
           className="fixed w-72 bg-white rounded-xl shadow-2xl border border-gray-100 z-[10000] overflow-hidden"
           style={{
             top: dropdownPosition.top,
             left: dropdownPosition.left,
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="p-4 bg-gradient-to-br from-indigo-50 to-purple-50 border-b border-gray-100">
