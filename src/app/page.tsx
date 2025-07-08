@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppSelector from '@/components/AppSelector';
 import ContentInput from '@/components/ContentInput';
 import { AppId } from '@/types/apps';
@@ -12,6 +12,9 @@ import EscapeRoom from '@/components/EscapeRoom';
 import Oefentoets from '@/components/Oefentoets';
 import ThirtySeconds from '@/components/ThirtySeconds';
 import Presentatie from '@/components/Presentatie';
+import { StudentProvider, useStudent } from '@/contexts/StudentContext';
+import LoginModal from '@/components/LoginModal';
+import StudentProfile from '@/components/StudentProfile';
 
 // Definieer de datatypes voor de props
 interface FlashcardData {
@@ -83,7 +86,9 @@ const hboLevels = [
   { key: 'afstudeerniveau', name: 'Afstudeerniveau', description: 'Het niveau moet uitdagend zijn en een beroep doen op kritisch en analytisch denkvermogen. De content moet complex, veelzijdig en praktijkgericht zijn, geschikt voor afstuderende HBO-studenten die op het punt staan het werkveld te betreden.' },
 ];
 
-export default function HomePage() {
+function HomePage() {
+  const { currentStudent, isLoggedIn } = useStudent();
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [baseContent, setBaseContent] = useState('');
   const [didactics, setDidactics] = useState('');
   const [pedagogy, setPedagogy] = useState('');
@@ -254,6 +259,13 @@ export default function HomePage() {
     setGenerationError(null);
   };
 
+  // Show login modal when leeromgeving is generated but no student is logged in
+  useEffect(() => {
+    if (isGenerated && !isLoggedIn) {
+      setShowLoginModal(true);
+    }
+  }, [isGenerated, isLoggedIn]);
+
   if (isGenerated) {
     const enabledApps = Object.entries(selectedApps)
       .filter(([, isSelected]) => isSelected)
@@ -284,12 +296,19 @@ export default function HomePage() {
                  <p className="text-sm text-gray-500 font-medium">Powered by AI</p>
                </div>
             </div>
-            <button
-              onClick={handleBackToBuilder}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
-            >
-              ← Terug naar bouwer
-            </button>
+            <div className="flex items-center gap-4">
+              {currentStudent && (
+                <StudentProfile 
+                  presentationTitle={baseContent ? `Leeromgeving: ${new Date().toLocaleDateString('nl-NL')}` : undefined}
+                />
+              )}
+              <button
+                onClick={handleBackToBuilder}
+                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
+              >
+                ← Terug naar bouwer
+              </button>
+            </div>
           </header>
 
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
@@ -380,6 +399,13 @@ export default function HomePage() {
           </main>
           </div>
         </div>
+        
+        {/* Login Modal */}
+        <LoginModal 
+          isOpen={showLoginModal} 
+          onClose={() => setShowLoginModal(false)}
+          presentationTitle={baseContent ? `Leeromgeving: ${new Date().toLocaleDateString('nl-NL')}` : undefined}
+        />
       </div>
     );
   }
@@ -569,5 +595,14 @@ export default function HomePage() {
         </footer>
       </div>
     </main>
+  );
+}
+
+// Wrap HomePage with StudentProvider
+export default function Page() {
+  return (
+    <StudentProvider>
+      <HomePage />
+    </StudentProvider>
   );
 } 

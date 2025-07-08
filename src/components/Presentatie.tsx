@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { FiChevronLeft, FiChevronRight, FiMaximize2, FiMinimize2, FiGrid, FiFileText, FiMessageCircle, FiEdit3, FiSave, FiX, FiPlus, FiTrash2, FiDownload } from 'react-icons/fi';
+import { useStudent } from '@/contexts/StudentContext';
+import { StudentNotes, StudentChat } from '@/utils/studentStorage';
+import StudentStorage from '@/utils/studentStorage';
 
 // Types
 interface SlideContent {
@@ -47,6 +50,7 @@ interface ChatMessage {
 }
 
 const Presentatie: React.FC<PresentatieProps> = ({ data, baseContent = '', didactics = '', pedagogy = '', level = '' }) => {
+  const { currentStudent } = useStudent();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
@@ -56,6 +60,7 @@ const Presentatie: React.FC<PresentatieProps> = ({ data, baseContent = '', didac
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedSlides, setEditedSlides] = useState<Slide[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [slidesChatHistory, setSlidesChatHistory] = useState<Record<string, ChatMessage[]>>({});
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
 
@@ -89,23 +94,51 @@ const Presentatie: React.FC<PresentatieProps> = ({ data, baseContent = '', didac
     if (data && data.slides) {
       setEditedSlides([...data.slides]);
       // Load student notes from localStorage
-      loadStudentNotes();
+      if (currentStudent) {
+        loadStudentNotes();
+      }
     }
-  }, [data]);
+  }, [data, currentStudent]);
+
+  // Load chat history for current slide
+  useEffect(() => {
+    if (data && currentStudent && slidesChatHistory[data.slides[currentSlide]?.id]) {
+      setChatMessages(slidesChatHistory[data.slides[currentSlide].id] || []);
+    } else {
+      setChatMessages([]);
+    }
+  }, [currentSlide, data, slidesChatHistory, currentStudent]);
 
   // LocalStorage functions for student notes
   const loadStudentNotes = () => {
-    if (data?.title) {
-      const saved = localStorage.getItem(`studentNotes_${data.title}`);
-      if (saved) {
-        setStudentNotes(JSON.parse(saved));
+    if (data?.title && currentStudent) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      
+      // Try to migrate old data first
+      const migrated = StudentStorage.migrateOldData(currentStudent.id, data.title);
+      if (migrated) {
+        console.log('Migrated old student data to new format');
       }
+      
+      // Load student notes with new format
+      const notes = StudentNotes.load(currentStudent.id, presentationId);
+      setStudentNotes(notes);
+      
+      // Load chat history per slide
+      const allChatData: Record<string, ChatMessage[]> = {};
+      data.slides.forEach(slide => {
+        const chatHistory = StudentChat.load(currentStudent.id, presentationId, slide.id);
+        if (chatHistory.length > 0) {
+          allChatData[slide.id] = chatHistory;
+        }
+      });
     }
   };
 
   const saveStudentNotes = (notes: Record<string, string>) => {
-    if (data?.title) {
-      localStorage.setItem(`studentNotes_${data.title}`, JSON.stringify(notes));
+    if (data?.title && currentStudent) {
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      StudentNotes.save(currentStudent.id, presentationId, notes);
     }
   };
 
@@ -164,10 +197,12 @@ const Presentatie: React.FC<PresentatieProps> = ({ data, baseContent = '', didac
 
   // Chat functionality
   const sendChatMessage = async () => {
-    if (!chatInput.trim() || !data) return;
+    if (!chatInput.trim() || !data || !currentStudent) return;
 
+    const currentSlideId = data.slides[currentSlide].id;
     const userMessage: ChatMessage = { role: 'user', content: chatInput };
-    setChatMessages(prev => [...prev, userMessage]);
+    const newMessages = [...chatMessages, userMessage];
+    setChatMessages(newMessages);
     setChatInput('');
     setIsChatLoading(true);
 
@@ -190,14 +225,28 @@ const Presentatie: React.FC<PresentatieProps> = ({ data, baseContent = '', didac
       
       const result = await response.json();
       const assistantMessage: ChatMessage = { role: 'assistant', content: result.response };
-      setChatMessages(prev => [...prev, assistantMessage]);
+      const finalMessages = [...newMessages, assistantMessage];
+      setChatMessages(finalMessages);
+      
+      // Save chat history for this slide
+      const updatedChatHistory = { ...slidesChatHistory, [currentSlideId]: finalMessages };
+      setSlidesChatHistory(updatedChatHistory);
+      
+      // Save to localStorage
+      const presentationId = StudentStorage.generatePresentationId(data.title);
+      StudentChat.save(currentStudent.id, presentationId, finalMessages, currentSlideId);
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: ChatMessage = { 
         role: 'assistant', 
         content: 'Sorry, ik kon je vraag niet verwerken. Probeer het opnieuw.' 
       };
-      setChatMessages(prev => [...prev, errorMessage]);
+      const finalMessages = [...newMessages, errorMessage];
+      setChatMessages(finalMessages);
+      
+      // Save even error messages
+      const updatedChatHistory = { ...slidesChatHistory, [currentSlideId]: finalMessages };
+      setSlidesChatHistory(updatedChatHistory);
     } finally {
       setIsChatLoading(false);
     }
