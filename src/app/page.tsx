@@ -11,6 +11,7 @@ import Mindmap from '@/components/Mindmap';
 import EscapeRoom from '@/components/EscapeRoom';
 import Oefentoets from '@/components/Oefentoets';
 import ThirtySeconds from '@/components/ThirtySeconds';
+import Presentatie from '@/components/Presentatie';
 
 // Definieer de datatypes voor de props
 interface FlashcardData {
@@ -107,6 +108,7 @@ export default function HomePage() {
   const [escapeRoomData, setEscapeRoomData] = useState<any | null>(null);
   const [oefentoetsData, setOefentoetsData] = useState<any | null>(null);
   const [thirtySecondsData, setThirtySecondsData] = useState<any | null>(null);
+  const [presentatieData, setPresentatieData] = useState<any | null>(null);
 
   // Nieuwe state voor Escape Room instellingen
   const [escapeRoomTime, setEscapeRoomTime] = useState(20); // Default 20 minuten
@@ -190,6 +192,16 @@ export default function HomePage() {
         }).then(res => res.json())
       });
     }
+    if (selectedApps.presentatie) {
+      generationPromises.push({
+        id: 'presentatie',
+        promise: fetch('/api/generate-presentatie', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyPayload),
+        }).then(res => res.json())
+      });
+    }
 
     try {
       const results = await Promise.all(generationPromises.map(p => p.promise.catch(e => ({ error: e, id: p.id }))));
@@ -199,6 +211,7 @@ export default function HomePage() {
       let newEscapeRoomData: any | null = null;
       let newOefentoetsData: any | null = null;
       let newThirtySecondsData: any | null = null;
+      let newPresentatieData: any | null = null;
       
       results.forEach((result, index) => {
         const appId = generationPromises[index].id;
@@ -212,6 +225,7 @@ export default function HomePage() {
         if (appId === 'escaperoom') newEscapeRoomData = result || null;
         if (appId === 'oefentoets') newOefentoetsData = result.testData || null;
         if (appId === 'thirtyseconds') newThirtySecondsData = result.gameData || null;
+        if (appId === 'presentatie') newPresentatieData = result.presentationData || null;
       });
 
       setFlashcardsData(newFlashcardsData);
@@ -219,6 +233,7 @@ export default function HomePage() {
       setEscapeRoomData(newEscapeRoomData);
       setOefentoetsData(newOefentoetsData);
       setThirtySecondsData(newThirtySecondsData);
+      setPresentatieData(newPresentatieData);
 
     } catch (e: any) {
       console.error("Fout bij het genereren van apps:", e);
@@ -235,6 +250,7 @@ export default function HomePage() {
     setEscapeRoomData(null);
     setOefentoetsData(null);
     setThirtySecondsData(null);
+    setPresentatieData(null);
     setGenerationError(null);
   };
 
@@ -351,11 +367,14 @@ export default function HomePage() {
                   <ThirtySeconds data={thirtySecondsData} />
                 )}
                 {activeTab === 'presentatie' && (
-                     <div className="w-full max-w-4xl mx-auto p-8 text-center bg-white rounded-lg shadow-lg">
-                         <div className="text-4xl mb-4">{appDetails[activeTab].icon}</div>
-                         <h3 className="text-2xl font-semibold">{appDetails[activeTab].name} wordt voorbereid...</h3>
-                     </div>
-                 )}
+                  <Presentatie 
+                    data={presentatieData} 
+                    baseContent={baseContent}
+                    didactics={didactics}
+                    pedagogy={pedagogy}
+                    level={level}
+                  />
+                )}
               </>
             )}
           </main>
